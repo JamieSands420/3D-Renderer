@@ -43,15 +43,15 @@ class triangle():
         self.constructor = [0, 1, 2, 0]
         #constructor tells program what verts are connected
 
-    def draw_triangle(self):
+    def draw(self):
 
         # go through each constructor and draw the lines together
         projection(self)
         for i in range(3):
             pygame.draw.line(scr, (255, 0, 0), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 5)
 
-tr1 = triangle(z=1)
-tr2 = triangle(x=10, z=1, L = (-1, -20, 0), T = (0, 0, 0), R = (1, -20, 0))
+squareTri1 = triangle(z=1, T = (-10, -2, 0))
+squareTri2 = triangle(x=10, z=1, L = (-2, -20, 0), T = (0, 0, 0), R = (0, -20, 0))
 
 playerCor = [0, 0, 0]
 
@@ -82,8 +82,8 @@ while run:
     #drawing section, clear screen
     scr.fill((0, 0, 0))
 
-    tr1.draw_triangle()
-    tr2.draw_triangle()
+    squareTri1.draw() 
+    squareTri2.draw()
 
     pygame.display.flip()
     #drawing section, update screen
