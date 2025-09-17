@@ -1,8 +1,38 @@
 import pygame
+import numpy as np
 
 width = 900
 height = 900
 scr = pygame.display.set_mode((width, height))
+
+#store xyz rots as degrees in shape obj
+#if rotate just update these variable
+#each projection take the variables and rotate the final co ordinates before projections after maths
+#from the obj co ordinates
+
+def rotate(theta, axis, x, y, z):
+    theta = np.radians(theta)
+
+    if axis == x:
+        xRot = ([
+            [1, 0, 0]
+            [0, np.cos(theta), -np.sin(theta)]
+            [0, np.sin(theta), np.cos(theta)]
+            ])
+
+    elif axis == y:
+        yRot = ([
+            [np.cos(theta), 0, np.sin(theta)]
+            [0, 1, 0]
+            [-np.sin(theta), 0, np.cos(theta)]
+            ])
+
+    elif axis == z:
+        zRot = ([
+            [np.cos(theta), -np.sin(theta), 0]
+            [np.sin(theta), np.cos(theta), 0]
+            [0, 0, 1]
+            ])   
 
 def projection(obj):
     
