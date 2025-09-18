@@ -12,27 +12,36 @@ scr = pygame.display.set_mode((width, height))
 
 def rotate(theta, axis, x, y, z):
     theta = np.radians(theta)
+    cords = ([x, y, z])
 
-    if axis == x:
+    if axis == "x":
         xRot = ([
-            [1, 0, 0]
-            [0, np.cos(theta), -np.sin(theta)]
+            [1, 0, 0],
+            [0, np.cos(theta), -np.sin(theta)],
             [0, np.sin(theta), np.cos(theta)]
             ])
 
-    elif axis == y:
+        cords = np.dot(xRot, cords)
+
+    elif axis == 'y':
         yRot = ([
-            [np.cos(theta), 0, np.sin(theta)]
-            [0, 1, 0]
+            [np.cos(theta), 0, np.sin(theta)],
+            [0, 1, 0],
             [-np.sin(theta), 0, np.cos(theta)]
             ])
 
-    elif axis == z:
+        cords = np.dot(yRot, cords)
+
+    elif axis == 'z':
         zRot = ([
-            [np.cos(theta), -np.sin(theta), 0]
-            [np.sin(theta), np.cos(theta), 0]
+            [np.cos(theta), -np.sin(theta), 0],
+            [np.sin(theta), np.cos(theta), 0],
             [0, 0, 1]
             ])   
+
+        cords = np.dot(zRot, cords)
+
+    return cords
 
 def projection(obj):
     
@@ -40,6 +49,14 @@ def projection(obj):
         tempX = obj.vertexes[i][0] + obj.x - playerCor[0]
         tempY = obj.vertexes[i][1] + obj.y - playerCor[1]
         tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
+
+        cords = rotate(obj.xRot, "x", tempX, tempY, tempZ)
+        cords = rotate(obj.yRot, "y", cords[0], cords[1], cords[2])
+        cords = rotate(obj.zRot, "z", cords[0], cords[1], cords[2])
+
+        tempX = cords[0]
+        tempY = cords[1]
+        tempZ = cords[2]
         
         #avoids division by 0 and flipping of rendering
         if tempZ <= 0.0000000000000000000000001:
@@ -55,6 +72,10 @@ class triangle():
         self.x = x
         self.y = y
         self.z = z
+
+        self.xRot = 0
+        self.yRot = 0
+        self.zRot = 0
         
         size = 10
 
@@ -82,6 +103,8 @@ class triangle():
 
 squareTri1 = triangle(z=1, T = (-10, -2, 0))
 squareTri2 = triangle(x=10, z=1, L = (-2, -20, 0), T = (0, 0, 0), R = (0, -20, 0))
+
+Tri = triangle(z=1)
 
 playerCor = [0, 0, 0]
 
@@ -112,8 +135,11 @@ while run:
     #drawing section, clear screen
     scr.fill((0, 0, 0))
 
-    squareTri1.draw() 
-    squareTri2.draw()
+    Tri.zRot +=0.1
+    Tri.draw()
+
+    #squareTri1.draw() 
+    #squareTri2.draw()
 
     pygame.display.flip()
     #drawing section, update screen

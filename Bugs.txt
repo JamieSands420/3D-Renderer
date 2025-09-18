@@ -5,4 +5,13 @@ this is due to the z axis wrapping when the z is smaller that 0
 
 ---
 
+when applying rotation the triangle can follow in a werid way related to the player
+i think it has to do with removing the player location before applying rotation
+
+---
+
+x rot and y rot misbehaves
+
+---
+
 continue here
