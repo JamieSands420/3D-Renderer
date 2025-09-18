@@ -46,17 +46,17 @@ def rotate(theta, axis, x, y, z):
 def projection(obj):
     
     for i in range(len(obj.vertexes)):
-        tempX = obj.vertexes[i][0] + obj.x - playerCor[0]
-        tempY = obj.vertexes[i][1] + obj.y - playerCor[1]
-        tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
+        tempX = obj.vertexes[i][0] + obj.x
+        tempY = obj.vertexes[i][1] + obj.y
+        tempZ = obj.vertexes[i][2] + obj.z
 
         cords = rotate(obj.xRot, "x", tempX, tempY, tempZ)
         cords = rotate(obj.yRot, "y", cords[0], cords[1], cords[2])
         cords = rotate(obj.zRot, "z", cords[0], cords[1], cords[2])
 
-        tempX = cords[0]
-        tempY = cords[1]
-        tempZ = cords[2]
+        tempX = cords[0] - playerCor[0]
+        tempY = cords[1] - playerCor[1]
+        tempZ = cords[2] - playerCor[2]
         
         #avoids division by 0 and flipping of rendering
         if tempZ <= 0.0000000000000000000000001:
@@ -135,7 +135,7 @@ while run:
     #drawing section, clear screen
     scr.fill((0, 0, 0))
 
-    Tri.zRot +=0.1
+    Tri.yRot +=0.1
     Tri.draw()
 
     #squareTri1.draw() 
