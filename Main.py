@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import time
 
 width = 900
 height = 900
@@ -44,26 +45,27 @@ def rotate(theta, axis, x, y, z):
     return cords
 
 def projection(obj):
+    focal_length = 300
     
     for i in range(len(obj.vertexes)):
-        tempX = obj.vertexes[i][0] + obj.x
-        tempY = obj.vertexes[i][1] + obj.y
-        tempZ = obj.vertexes[i][2] + obj.z
+        tempX = obj.vertexes[i][0] 
+        tempY = obj.vertexes[i][1]
+        tempZ = obj.vertexes[i][2]
 
         cords = rotate(obj.xRot, "x", tempX, tempY, tempZ)
         cords = rotate(obj.yRot, "y", cords[0], cords[1], cords[2])
         cords = rotate(obj.zRot, "z", cords[0], cords[1], cords[2])
 
-        tempX = cords[0] - playerCor[0]
-        tempY = cords[1] - playerCor[1]
-        tempZ = cords[2] - playerCor[2]
+        tempX = cords[0] - playerCor[0] + obj.x
+        tempY = cords[1] - playerCor[1] + obj.y
+        tempZ = cords[2] - playerCor[2] + obj.z
         
         #avoids division by 0 and flipping of rendering
         if tempZ <= 0.0000000000000000000000001:
             tempZ = 0.0000000000000000000000001
 
-        obj.projected_vertexes[i][0] = tempX/tempZ + width/2
-        obj.projected_vertexes[i][1] = tempY/tempZ + height/2
+        obj.projected_vertexes[i][0] = (tempX*focal_length)/tempZ + width/2
+        obj.projected_vertexes[i][1] = (tempY*focal_length)/tempZ + height/2
         
 class triangle():
 
@@ -80,9 +82,9 @@ class triangle():
         size = 10
 
         self.vertexes = [
-            [L[0]*size, L[1], L[2]], #left vertex
-            [T[0], T[1]*size, T[2]], #middle vertex
-            [R[0]*size, R[1], R[2]]  #right vertex
+            [L[0], L[1], L[2]], #left vertex
+            [T[0], T[1], T[2]], #middle vertex
+            [R[0], R[1], R[2]]  #right vertex
             ]
 
         self.projected_vertexes = [
@@ -104,7 +106,7 @@ class triangle():
 squareTri1 = triangle(z=1, T = (-10, -2, 0))
 squareTri2 = triangle(x=10, z=1, L = (-2, -20, 0), T = (0, 0, 0), R = (0, -20, 0))
 
-Tri = triangle(z=1)
+Tri = triangle(z=50)
 
 playerCor = [0, 0, 0]
 
@@ -115,11 +117,11 @@ while run:
     #movement
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
-        playerCor[2] += 0.0005
+        playerCor[2] += 0.05
     if keys[pygame.K_a]:
         playerCor[0] -= 0.1
     if keys[pygame.K_s]:
-        playerCor[2] -= 0.0005
+        playerCor[2] -= 0.05
     if keys[pygame.K_d]:
         playerCor[0] += 0.1
     if keys[pygame.K_LSHIFT]:
@@ -135,13 +137,16 @@ while run:
     #drawing section, clear screen
     scr.fill((0, 0, 0))
 
+    Tri.xRot +=0.1
     Tri.yRot +=0.1
+    Tri.zRot +=0.1
     Tri.draw()
 
     #squareTri1.draw() 
     #squareTri2.draw()
 
     pygame.display.flip()
+
     #drawing section, update screen
 
 pygame.quit()
