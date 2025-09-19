@@ -1,15 +1,9 @@
 import pygame
 import numpy as np
-import time
 
 width = 900
 height = 900
 scr = pygame.display.set_mode((width, height))
-
-#store xyz rots as degrees in shape obj
-#if rotate just update these variable
-#each projection take the variables and rotate the final co ordinates before projections after maths
-#from the obj co ordinates
 
 def rotate(theta, axis, x, y, z):
     theta = np.radians(theta)
@@ -45,7 +39,7 @@ def rotate(theta, axis, x, y, z):
     return cords
 
 def projection(obj):
-    focal_length = 300
+    focal_length = 600
     
     for i in range(len(obj.vertexes)):
         tempX = obj.vertexes[i][0] 
@@ -69,7 +63,7 @@ def projection(obj):
         
 class triangle():
 
-    def __init__(self, x=0, y=0, z=0, L = (-1, 0, 0), T = (0, -2, 0), R = (1, 0, 0)):
+    def __init__(self, x=0, y=0, z=0, L = (-1, 0, 0), T = (-1, -2, 0), R = (1, 0, 0)):
 
         self.x = x
         self.y = y
@@ -103,12 +97,24 @@ class triangle():
         for i in range(3):
             pygame.draw.line(scr, (255, 0, 0), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 5)
 
-squareTri1 = triangle(z=1, T = (-10, -2, 0))
-squareTri2 = triangle(x=10, z=1, L = (-2, -20, 0), T = (0, 0, 0), R = (0, -20, 0))
-
-Tri = triangle(z=50)
 
 playerCor = [0, 0, 0]
+
+
+cube = [
+    triangle(z=10, L=(-5, -5, -5), T=(5, 5, -5), R=(5, -5, -5)),
+    triangle(z=10, L=(-5, -5, -5), T=(-5, 5, -5), R=(5, 5, -5)),
+    triangle(z=10, L=(-5, -5, 5), T=(5, -5, 5), R=(5, 5, 5)),
+    triangle(z=10, L=(-5, -5, 5), T=(5, 5, 5), R=(-5, 5, 5)),
+    triangle(z=10, L=(-5, -5, -5), T=(-5, -5, 5), R=(-5, 5, 5)),
+    triangle(z=10, L=(-5, -5, -5), T=(-5, 5, 5), R=(-5, 5, -5)),
+    triangle(z=10, L=(5, -5, -5), T=(5, 5, -5), R=(5, 5, 5)),
+    triangle(z=10, L=(5, -5, -5), T=(5, 5, 5), R=(5, -5, 5)),
+    triangle(z=10, L=(-5, 5, -5), T=(-5, 5, 5), R=(5, 5, 5)),
+    triangle(z=10, L=(-5, 5, -5), T=(5, 5, 5), R=(5, 5, -5)),
+    triangle(z=10, L=(-5, -5, -5), T=(5, -5, -5), R=(5, -5, 5)),
+    triangle(z=10, L=(-5, -5, -5), T=(5, -5, 5), R=(-5, -5, 5)),
+]
 
 pygame.init()
 run = True
@@ -137,13 +143,11 @@ while run:
     #drawing section, clear screen
     scr.fill((0, 0, 0))
 
-    Tri.xRot +=0.1
-    Tri.yRot +=0.1
-    Tri.zRot +=0.1
-    Tri.draw()
-
-    #squareTri1.draw() 
-    #squareTri2.draw()
+    for i in range(len(cube)):
+        cube[i].draw()
+        cube[i].xRot += 0.4
+        cube[i].yRot += 0.4
+        cube[i].zRot += 0.4
 
     pygame.display.flip()
 
