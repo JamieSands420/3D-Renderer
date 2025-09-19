@@ -42,24 +42,23 @@ def projection(obj):
     focal_length = 600
     
     for i in range(len(obj.vertexes)):
-        tempX = obj.vertexes[i][0] 
-        tempY = obj.vertexes[i][1]
-        tempZ = obj.vertexes[i][2]
+        #Translate vertex
+        tempX = obj.vertexes[i][0] + obj.x - playerCor[0]
+        tempY = obj.vertexes[i][1] + obj.y - playerCor[1]
+        tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
 
+        #Rotate vertex
         cords = rotate(obj.xRot, "x", tempX, tempY, tempZ)
         cords = rotate(obj.yRot, "y", cords[0], cords[1], cords[2])
         cords = rotate(obj.zRot, "z", cords[0], cords[1], cords[2])
 
-        tempX = cords[0] - playerCor[0] + obj.x
-        tempY = cords[1] - playerCor[1] + obj.y
-        tempZ = cords[2] - playerCor[2] + obj.z
-        
-        #avoids division by 0 and flipping of rendering
-        if tempZ <= 0.0000000000000000000000001:
-            tempZ = 0.0000000000000000000000001
+        #Prevent divide by zero or flipping of rendering
+        if cords[2] <= 0.0000001:
+            cords[2] = 0.0000001
 
-        obj.projected_vertexes[i][0] = (tempX*focal_length)/tempZ + width/2
-        obj.projected_vertexes[i][1] = (tempY*focal_length)/tempZ + height/2
+        obj.projected_vertexes[i][0] = (cords[0] * focal_length) / cords[2] + width / 2
+        obj.projected_vertexes[i][1] = (cords[1] * focal_length) / cords[2] + height / 2
+
         
 class triangle():
 
@@ -143,11 +142,17 @@ while run:
     #drawing section, clear screen
     scr.fill((0, 0, 0))
 
+    keys = pygame.key.get_pressed()
     for i in range(len(cube)):
         cube[i].draw()
-        cube[i].xRot += 0.4
-        cube[i].yRot += 0.4
-        cube[i].zRot += 0.4
+        if keys[pygame.K_LEFT]:
+            cube[i].yRot += 0.2
+        if keys[pygame.K_RIGHT]:
+            cube[i].yRot -= 0.2
+        if keys[pygame.K_UP]:
+            cube[i].xRot -=  0.2
+        if keys[pygame.K_DOWN]:
+            cube[i].xRot += 0.2
 
     pygame.display.flip()
 
