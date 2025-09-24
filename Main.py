@@ -48,9 +48,9 @@ def projection(obj):
         tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
 
         #Rotate vertex
-        cords = rotate(obj.xRot, "x", tempX, tempY, tempZ)
-        cords = rotate(obj.yRot, "y", cords[0], cords[1], cords[2])
-        cords = rotate(obj.zRot, "z", cords[0], cords[1], cords[2])
+        cords = rotate(obj.xRot+playerRot[0], "x", tempX, tempY, tempZ)
+        cords = rotate(obj.yRot+playerRot[1], "y", cords[0], cords[1], cords[2])
+        cords = rotate(obj.zRot+playerRot[2], "z", cords[0], cords[1], cords[2])
 
         #Prevent divide by zero or flipping of rendering
         if cords[2] <= 0.0000001:
@@ -98,6 +98,7 @@ class triangle():
 
 
 playerCor = [0, 0, 0]
+playerRot = [0, 0, 0]
 
 
 cube = [
@@ -133,6 +134,14 @@ while run:
         playerCor[1] += 0.1
     if keys[pygame.K_SPACE]:
         playerCor[1] -= 0.1
+    if keys[pygame.K_LEFT]:
+        playerRot[1] += 0.2
+    if keys[pygame.K_RIGHT]:
+        playerRot[1] -= 0.2
+    if keys[pygame.K_UP]:
+        playerRot[0] -= 0.2
+    if keys[pygame.K_DOWN]:
+        playerRot[0] += 0.2
 
     #event handler
     for event in pygame.event.get():
@@ -145,15 +154,7 @@ while run:
     keys = pygame.key.get_pressed()
     for i in range(len(cube)):
         cube[i].draw()
-        if keys[pygame.K_LEFT]:
-            cube[i].yRot += 0.2
-        if keys[pygame.K_RIGHT]:
-            cube[i].yRot -= 0.2
-        if keys[pygame.K_UP]:
-            cube[i].xRot -=  0.2
-        if keys[pygame.K_DOWN]:
-            cube[i].xRot += 0.2
-
+        
     pygame.display.flip()
 
     #drawing section, update screen
