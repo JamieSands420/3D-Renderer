@@ -1,9 +1,11 @@
 import pygame
 import numpy as np
+from pynput import mouse
 
 width = 900
 height = 900
 scr = pygame.display.set_mode((width, height))
+mousePos = [0, 0]
 
 def rotate(theta, axis, x, y, z):
     theta = np.radians(theta)
@@ -48,8 +50,8 @@ def projection(obj):
         tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
 
         #Rotate vertex
-        cords = rotate(obj.xRot+playerRot[0], "x", tempX, tempY, tempZ)
-        cords = rotate(obj.yRot+playerRot[1], "y", cords[0], cords[1], cords[2])
+        cords = rotate(obj.yRot+playerRot[1], "y", tempX, tempY, tempZ)
+        cords = rotate(obj.xRot+playerRot[0], "x", cords[0], cords[1], cords[2])
         cords = rotate(obj.zRot+playerRot[2], "z", cords[0], cords[1], cords[2])
 
         #Prevent divide by zero or flipping of rendering
@@ -94,7 +96,7 @@ class triangle():
         # go through each constructor and draw the lines together
         projection(self)
         for i in range(3):
-            pygame.draw.line(scr, (255, 0, 0), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 5)
+            pygame.draw.line(scr, (0, 0, 0), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 5)
 
 
 playerCor = [0, 0, 0]
@@ -116,6 +118,9 @@ cube = [
     triangle(z=10, L=(-5, -5, -5), T=(5, -5, 5), R=(-5, -5, 5)),
 ]
 
+pygame.mouse.set_visible(False)
+pygame.event.set_grab(True)
+pygame.mouse.get_rel()  # Reset initial mouse delta
 pygame.init()
 run = True
 while run:
@@ -134,14 +139,6 @@ while run:
         playerCor[1] += 0.1
     if keys[pygame.K_SPACE]:
         playerCor[1] -= 0.1
-    if keys[pygame.K_LEFT]:
-        playerRot[1] += 0.2
-    if keys[pygame.K_RIGHT]:
-        playerRot[1] -= 0.2
-    if keys[pygame.K_UP]:
-        playerRot[0] -= 0.2
-    if keys[pygame.K_DOWN]:
-        playerRot[0] += 0.2
 
     #event handler
     for event in pygame.event.get():
@@ -149,7 +146,7 @@ while run:
             run = False
 
     #drawing section, clear screen
-    scr.fill((0, 0, 0))
+    scr.fill((200, 200, 255))
 
     keys = pygame.key.get_pressed()
     for i in range(len(cube)):
@@ -157,6 +154,8 @@ while run:
         
     pygame.display.flip()
 
-    #drawing section, update screen
+    dx, dy = pygame.mouse.get_rel()
+    playerRot[1] -= dx * 0.2 
+    playerRot[0] += dy * 0.2 
 
 pygame.quit()
