@@ -3,9 +3,29 @@ import numpy as np
 from pynput import mouse
 
 width = 900
-height = 900
+height = 800
 scr = pygame.display.set_mode((width, height))
 mousePos = [0, 0]
+
+# obj parse
+def load_obj(filename, z_offset=10, size = 1):
+    vertices = []
+    triangles = []
+
+    with open(filename, 'r') as file:
+        for line in file:
+            if line.startswith('v '):
+                parts = line.strip().split()
+                x, y, z = float(parts[1])/size, 0 - float(parts[2])/size, float(parts[3])/size
+                vertices.append((x, y, z))
+            elif line.startswith('f '):
+                parts = line.strip().split()
+                face_indices = [int(p.split('/')[0]) - 1 for p in parts[1:4]]
+                v1, v2, v3 = vertices[face_indices[0]], vertices[face_indices[1]], vertices[face_indices[2]]
+                tri = triangle(z=z_offset, L=v1, T=v2, R=v3)
+                triangles.append(tri)
+
+    return triangles
 
 def rotate(theta, axis, x, y, z):
     theta = np.radians(theta)
@@ -102,25 +122,11 @@ class triangle():
 playerCor = [0, 0, 0]
 playerRot = [0, 0, 0]
 
-
-cube = [
-    triangle(z=10, L=(-5, -5, -5), T=(5, 5, -5), R=(5, -5, -5)),
-    triangle(z=10, L=(-5, -5, -5), T=(-5, 5, -5), R=(5, 5, -5)),
-    triangle(z=10, L=(-5, -5, 5), T=(5, -5, 5), R=(5, 5, 5)),
-    triangle(z=10, L=(-5, -5, 5), T=(5, 5, 5), R=(-5, 5, 5)),
-    triangle(z=10, L=(-5, -5, -5), T=(-5, -5, 5), R=(-5, 5, 5)),
-    triangle(z=10, L=(-5, -5, -5), T=(-5, 5, 5), R=(-5, 5, -5)),
-    triangle(z=10, L=(5, -5, -5), T=(5, 5, -5), R=(5, 5, 5)),
-    triangle(z=10, L=(5, -5, -5), T=(5, 5, 5), R=(5, -5, 5)),
-    triangle(z=10, L=(-5, 5, -5), T=(-5, 5, 5), R=(5, 5, 5)),
-    triangle(z=10, L=(-5, 5, -5), T=(5, 5, 5), R=(5, 5, -5)),
-    triangle(z=10, L=(-5, -5, -5), T=(5, -5, -5), R=(5, -5, 5)),
-    triangle(z=10, L=(-5, -5, -5), T=(5, -5, 5), R=(-5, -5, 5)),
-]
+cube = load_obj("c://users//Jamie//Desktop//crate.obj", 0)
 
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
-pygame.mouse.get_rel()  # Reset initial mouse delta
+pygame.mouse.get_rel()
 pygame.init()
 run = True
 while run:
@@ -128,17 +134,17 @@ while run:
     #movement
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
-        playerCor[2] += 0.05
+        playerCor[2] += 0.15
     if keys[pygame.K_a]:
-        playerCor[0] -= 0.1
+        playerCor[0] -= 0.4
     if keys[pygame.K_s]:
-        playerCor[2] -= 0.05
+        playerCor[2] -= 0.15
     if keys[pygame.K_d]:
-        playerCor[0] += 0.1
+        playerCor[0] += 0.4
     if keys[pygame.K_LSHIFT]:
-        playerCor[1] += 0.1
+        playerCor[1] += 1
     if keys[pygame.K_SPACE]:
-        playerCor[1] -= 0.1
+        playerCor[1] -= 1
 
     #event handler
     for event in pygame.event.get():
