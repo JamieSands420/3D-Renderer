@@ -7,10 +7,31 @@ height = 800
 scr = pygame.display.set_mode((width, height))
 mousePos = [0, 0]
 
+root = __file__[:-7]
+Resources = f"{root}\\Resources\\"
+
+opened_scene = ""
+def read_scene():
+    global opened_scene
+    
+    with open(f"{root}\\Config.txt", 'r') as file:
+        for line in file:
+            if line.startswith('Scene; '):
+                parts = line.strip().split()
+
+        if opened_scene == parts[1]:
+            return "same"
+        else:
+            opened_scene = parts[1]
+            return parts[1]
+        
+        
+
 # obj parse
-def load_obj(filename, z_offset=10, size = 1):
+def load_obj(filename, xx=0, yy=0, zz=10, size = 1):
     vertices = []
     triangles = []
+    filename = f"{Resources}{filename}.obj"
 
     with open(filename, 'r') as file:
         for line in file:
@@ -22,7 +43,7 @@ def load_obj(filename, z_offset=10, size = 1):
                 parts = line.strip().split()
                 face_indices = [int(p.split('/')[0]) - 1 for p in parts[1:4]]
                 v1, v2, v3 = vertices[face_indices[0]], vertices[face_indices[1]], vertices[face_indices[2]]
-                tri = triangle(z=z_offset, L=v1, T=v2, R=v3)
+                tri = triangle(x=xx, y=yy, z=zz, L=v1, T=v2, R=v3)
                 triangles.append(tri)
 
     return triangles
@@ -118,11 +139,23 @@ class triangle():
         for i in range(3):
             pygame.draw.line(scr, (0, 0, 0), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 5)
 
+scene = []
+def load_scene(sceneinput):
+    global scene
+
+    if sceneinput != "same":
+        scene = []
+        if sceneinput == "Untitled":
+            print("loaded untitled")
+            scene.append(load_obj("tree", 0, 0, 0))
+            scene.append(load_obj("crate", 0, 5, 0))
+        elif sceneinput == "Cube":
+            print("loaded cube")
+            scene.append(load_obj("cube", 0, 0, 10))
+            
 
 playerCor = [0, 0, 0]
 playerRot = [0, 0, 0]
-
-cube = load_obj("c://users//Jamie//Desktop//crate.obj", 0)
 
 pygame.mouse.set_visible(False)
 pygame.event.set_grab(True)
@@ -130,6 +163,8 @@ pygame.mouse.get_rel()
 pygame.init()
 run = True
 while run:
+
+    load_scene(read_scene())
 
     #movement
     keys = pygame.key.get_pressed()
@@ -155,8 +190,11 @@ while run:
     scr.fill((200, 200, 255))
 
     keys = pygame.key.get_pressed()
-    for i in range(len(cube)):
-        cube[i].draw()
+
+    # drawing the loaded scene
+    for i in range(len(scene)):
+        for ii in range(len(scene[i])):
+            scene[i][ii].draw()
         
     pygame.display.flip()
 

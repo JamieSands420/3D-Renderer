@@ -1,0 +1,10 @@
+# Config
+
+# loaded scene:
+Scene; Cube
+
+# Built in scenes:
+# Untitled
+# Cube
+
+# Case sensative
