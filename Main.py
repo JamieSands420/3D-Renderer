@@ -1,23 +1,59 @@
 import pygame
 import numpy as np
+import math
 from pynput import mouse
 
 width = 900
 height = 800
 scr = pygame.display.set_mode((width, height))
+clock = pygame.time.Clock()
+pygame.font.init()
 mousePos = [0, 0]
+fps = 0
+
+Yvol = 0
 
 root = __file__[:-7]
 Resources = f"{root}\\Resources\\"
+movement = "Walk"
+floor = 0
+details = False
+
+font = pygame.font.SysFont(None, 36)
 
 opened_scene = ""
 def read_scene():
     global opened_scene
+    global floor
+    global movement
+    global details
     
     with open(f"{root}\\Config.txt", 'r') as file:
         for line in file:
             if line.startswith('Scene; '):
                 parts = line.strip().split()
+
+                if opened_scene == parts[1]:
+                    return "same"
+                else:
+                    opened_scene = parts[1]
+                    return parts[1]
+
+            elif line.startswith('Camera;' ):
+                parts = line.strip().split()
+
+                if parts[1] == "Walk":
+                    movement = "Walk"
+                    floor = parts[2]
+                else:
+                    movement = "Free"
+
+            elif line.startswith('Details; '):
+                parts = line.strip().split()
+                if parts[1] == "False":
+                    details = False
+                else:
+                    details = True
 
         if opened_scene == parts[1]:
             return "same"
@@ -147,8 +183,8 @@ def load_scene(sceneinput):
         scene = []
         if sceneinput == "Untitled":
             print("loaded untitled")
-            scene.append(load_obj("tree", 0, 0, 0))
-            scene.append(load_obj("crate", 0, 5, 0))
+            scene.append(load_obj("tree", 0, 0, 0, 0.5))
+            scene.append(load_obj("crate", 0, 5, 0, 0.5))
         elif sceneinput == "Cube":
             print("loaded cube")
             scene.append(load_obj("cube", 0, 0, 10))
@@ -163,23 +199,50 @@ pygame.mouse.get_rel()
 pygame.init()
 run = True
 while run:
+    fpstext = font.render(str(math.ceil(fps)), True, (255, 255, 255))
+    xyztext = font.render(
+        f"x;{math.ceil(playerCor[0])} y;{math.ceil(playerCor[1])} z;{math.ceil(playerCor[2])}",
+        True,
+        (255, 255, 255)
+    )
 
     load_scene(read_scene())
 
     #movement
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_w]:
-        playerCor[2] += 0.15
-    if keys[pygame.K_a]:
-        playerCor[0] -= 0.4
-    if keys[pygame.K_s]:
-        playerCor[2] -= 0.15
-    if keys[pygame.K_d]:
-        playerCor[0] += 0.4
-    if keys[pygame.K_LSHIFT]:
-        playerCor[1] += 1
-    if keys[pygame.K_SPACE]:
-        playerCor[1] -= 1
+    if movement == "Free":
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            playerCor[2] += 0.4
+        if keys[pygame.K_a]:
+            playerCor[0] -= 0.4
+        if keys[pygame.K_s]:
+            playerCor[2] -= 0.4
+        if keys[pygame.K_d]:
+            playerCor[0] += 0.4
+        if keys[pygame.K_LSHIFT]:
+            playerCor[1] += 0.4  
+        if keys[pygame.K_SPACE]:
+            playerCor[1] -= 0.4
+    else:
+        if not int(floor) <= playerCor[1]:
+            Yvol += 0.05
+            playerCor[1] += Yvol
+        else:
+            Yvol = 0 
+            if keys[pygame.K_SPACE]:
+                Yvol = -1.25
+                playerCor[1] += Yvol
+        
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            playerCor[2] += 0.4
+        if keys[pygame.K_s]:
+            playerCor[2] -= 0.4
+        if keys[pygame.K_a]:
+            playerCor[0] -= 0.4
+        if keys[pygame.K_d]:
+            playerCor[0] += 0.4
+        
 
     #event handler
     for event in pygame.event.get():
@@ -195,11 +258,18 @@ while run:
     for i in range(len(scene)):
         for ii in range(len(scene[i])):
             scene[i][ii].draw()
+
+    if details == True:
+        scr.blit(fpstext, (0, 0))
+        scr.blit(xyztext, (0, 20))
         
     pygame.display.flip()
 
     dx, dy = pygame.mouse.get_rel()
     playerRot[1] -= dx * 0.2 
-    playerRot[0] += dy * 0.2 
+    playerRot[0] += dy * 0.2
+
+    clock.tick(120)
+    fps = clock.get_fps()
 
 pygame.quit()

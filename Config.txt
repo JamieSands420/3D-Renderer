@@ -1,5 +1,11 @@
 # Config
 
+#fps & player xyz
+Details; True
+
+# movement method Free/Walk // if walk then also " FloorHeightY"
+Camera; Walk 10
+
 # loaded scene:
 Scene; Cube
 
