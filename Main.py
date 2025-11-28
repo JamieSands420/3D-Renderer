@@ -173,7 +173,7 @@ class triangle():
         # go through each constructor and draw the lines together
         projection(self)
         for i in range(3):
-            pygame.draw.line(scr, (0, 0, 0), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 5)
+            pygame.draw.line(scr, (255, 255, 255), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 1)
 
 scene = []
 def load_scene(sceneinput):
@@ -188,7 +188,15 @@ def load_scene(sceneinput):
         elif sceneinput == "Cube":
             print("loaded cube")
             scene.append(load_obj("cube", 0, 0, 10))
-            
+        elif sceneinput == "Flatland":
+            for i in range(5):
+                for ii in range(5):
+                    scene.append(load_obj("cube", 20*i, 20, 20*ii, 1))
+        elif sceneinput == "Bigcube":
+            for i in range(5):
+                for ii in range(5):
+                    for iii in range(5):
+                        scene.append(load_obj("cube", 20*i, 20*iii, 20*ii, 1))
 
 playerCor = [0, 0, 0]
 playerRot = [0, 0, 0]
@@ -224,6 +232,7 @@ while run:
         if keys[pygame.K_SPACE]:
             playerCor[1] -= 0.4
     else:
+        keys = pygame.key.get_pressed()
         if not int(floor) <= playerCor[1]:
             Yvol += 0.05
             playerCor[1] += Yvol
@@ -250,7 +259,7 @@ while run:
             run = False
 
     #drawing section, clear screen
-    scr.fill((200, 200, 255))
+    scr.fill((0, 0, 0))
 
     keys = pygame.key.get_pressed()
 
