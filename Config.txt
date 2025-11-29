@@ -1,7 +1,7 @@
 # Config
 
 #fps & player xyz
-Details; True
+Details; False
 
 # movement method Free/Walk
 Camera; Free 0
