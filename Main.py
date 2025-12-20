@@ -14,7 +14,7 @@ fps = 0
 Yvol = 0
 
 root = __file__[:-7]
-Resources = f"{root}\\Resources\\"
+Resources = f"{root}Resources/"
 movement = "Walk"
 floor = 0
 details = False
@@ -28,7 +28,7 @@ def read_scene():
     global movement
     global details
     
-    with open(f"{root}\\Config.txt", 'r') as file:
+    with open(f"{root}Config.txt", 'r') as file:
         for line in file:
             if line.startswith('Scene; '):
                 parts = line.strip().split()
