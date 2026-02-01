@@ -9,7 +9,7 @@ scr = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 pygame.font.init()
 mousePos = [0, 0]
-fps = 0
+fps = 5
 
 Yvol = 0
 
@@ -198,6 +198,23 @@ def load_scene(sceneinput):
                     for iii in range(5):
                         scene.append(load_obj("cube", 20*i, 20*iii, 20*ii, 1))
 
+class physics():
+    
+    def collision():
+        global scene
+
+        for i in range(len(scene)):
+            for ii in range(len(scene[i])):
+                if scene[i][ii].x - playerCor[0] < -12 or scene[i][ii].x - playerCor[0] > 12:
+                    
+                    if scene[i][ii].y - playerCor[1]  < -12 or scene[i][ii].y - playerCor[1]  > 12 : 
+
+                        if scene[i][ii].z - playerCor[2] < -12 or scene[i][ii].z - playerCor[2] > 12:
+
+                            print("Collision detected")
+    
+    
+
 playerCor = [0, 0, 0]
 playerRot = [0, 0, 0]
 
@@ -267,6 +284,8 @@ while run:
     for i in range(len(scene)):
         for ii in range(len(scene[i])):
             scene[i][ii].draw()
+
+    physics.collision()
 
     if details == True:
         scr.blit(fpstext, (0, 0))
