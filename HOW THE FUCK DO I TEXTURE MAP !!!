@@ -1,8 +1,0 @@
-okay i got i think, get a triangle in 3D co ordinates, project that triangle and minaipulate it however you want,
-then when ur done, get the screen co ordiante of each pixel laying within that triangles bounds witch is now only
-X Y because its been projected, then go through each FUCKING pixel and run the bysentric formula through it, then
-use the next formula, where x y z is how much that pixel is related to point a b and c on the triangle and a b and
-c is each point on the triangle, x*a1+y*b1 etc etc.. then it spits out as per ur example for values, 0.56, 0.26, then
-multiply 0.56 by the x resolution of the texture and 0.26 by the y resolution of the texture 256 by
-ur example, to get 143.36, 66.56 witch will then be rounded and it will then find the pixel colour at 143, 66 and
-take that pixel colour and assign it to the pixel we started with, then when all the pixels have been asigned a colour, draw each colour

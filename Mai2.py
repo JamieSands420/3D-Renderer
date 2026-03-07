@@ -10,6 +10,7 @@ clock = pygame.time.Clock()
 pygame.font.init()
 mousePos = [0, 0]
 fps = 5
+render_distance = 200
 
 Yvol = 0
 
@@ -117,14 +118,20 @@ def rotate(theta, axis, x, y, z):
 
     return cords
 
+draw = False
 def projection(obj):
+    global draw
     focal_length = 600
     
-    for i in range(len(obj.vertexes)): #DO NUMPY HANDLING FROM HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE LOOK AT THIS JAMIE
+    for i in range(len(obj.vertexes)):
         #Translate vertex
         tempX = obj.vertexes[i][0] + obj.x - playerCor[0]
         tempY = obj.vertexes[i][1] + obj.y - playerCor[1]
         tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
+
+        if playerCor[0]-tempX > render_distance or playerCor[1]-tempY > render_distance or playerCor[2]-tempZ > render_distance or tempX-playerCor[0] > render_distance or tempY-playerCor[1] > render_distance or tempZ-playerCor[2] > render_distance:
+            draw = False
+            return
 
         #Rotate vertex
         cords = rotate(obj.yRot+playerRot[1], "y", tempX, tempY, tempZ)
@@ -137,6 +144,8 @@ def projection(obj):
 
         obj.projected_vertexes[i][0] = (cords[0] * focal_length) / cords[2] + width / 2
         obj.projected_vertexes[i][1] = (cords[1] * focal_length) / cords[2] + height / 2
+
+        draw = True 
 
         
 class triangle():
@@ -173,7 +182,8 @@ class triangle():
         # go through each constructor and draw the lines together
         projection(self)
         for i in range(3):
-            pygame.draw.line(scr, (255, 255, 255), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 1)
+            if draw:
+                pygame.draw.line(scr, (255, 255, 255), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 1)
 
 scene = []
 def load_scene(sceneinput):
@@ -189,8 +199,8 @@ def load_scene(sceneinput):
             print("loaded cube")
             scene.append(load_obj("cube", 0, 0, 10))
         elif sceneinput == "Flatland":
-            for i in range(5):
-                for ii in range(5):
+            for i in range(50):
+                for ii in range(50):
                     scene.append(load_obj("cube", 20*i, 20, 20*ii, 1))
         elif sceneinput == "Bigcube":
             for i in range(5):
@@ -222,17 +232,17 @@ while run:
     if movement == "Free":
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
-            playerCor[2] += 0.4
+            playerCor[2] += 50 * dt
         if keys[pygame.K_a]:
-            playerCor[0] -= 0.4
+            playerCor[0] -= 50 * dt
         if keys[pygame.K_s]:
-            playerCor[2] -= 0.4
+            playerCor[2] -= 50 * dt
         if keys[pygame.K_d]:
-            playerCor[0] += 0.4
+            playerCor[0] += 50 * dt
         if keys[pygame.K_LSHIFT]:
-            playerCor[1] += 0.4  
+            playerCor[1] += 50 * dt 
         if keys[pygame.K_SPACE]:
-            playerCor[1] -= 0.4
+            playerCor[1] -= 50 * dt
     else:
         keys = pygame.key.get_pressed()
         if not int(floor) <= playerCor[1]:
@@ -282,7 +292,7 @@ while run:
     playerRot[1] -= dx * 0.2 
     playerRot[0] += dy * 0.2
 
-    clock.tick(120)
+    dt = clock.tick(120) / 1000
     fps = clock.get_fps()
 
 pygame.quit()
