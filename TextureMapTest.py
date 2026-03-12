@@ -10,7 +10,7 @@ scr = pygame.display.set_mode((800, 800))
 clock = pygame.time.Clock()
 
 # Load texture
-texture = pygame.image.load("OIP.jpeg").convert()
+texture = pygame.image.load("Resources//OIP.jpeg").convert()
 texture_width, texture_height = texture.get_size()
 texture = pygame.surfarray.array3d(texture)
 

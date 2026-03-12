@@ -8,8 +8,9 @@ height = 800
 scr = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 pygame.font.init()
-mousePos = [0, 0]
+mousePos = [0, 0]#
 fps = 5
+render_distance = 200
 
 Yvol = 0
 
@@ -63,6 +64,8 @@ def read_scene():
         
         
 
+import numpy as np
+
 # obj parse
 def load_obj(filename, xx=0, yy=0, zz=10, size = 1):
     vertices = []
@@ -84,59 +87,64 @@ def load_obj(filename, xx=0, yy=0, zz=10, size = 1):
 
     return triangles
 
-def rotate(theta, axis, x, y, z):
-    theta = np.radians(theta)
-    cords = ([x, y, z])
+def rotate(xt, yt, zt, verts):
+    xt, yt, zt = np.radians(xt), np.radians(yt), np.radians(zt)
 
-    if axis == "x":
-        xRot = ([
-            [1, 0, 0],
-            [0, np.cos(theta), -np.sin(theta)],
-            [0, np.sin(theta), np.cos(theta)]
-            ])
+    xRot = ([
+        [1, 0, 0],
+        [0, np.cos(xt), -np.sin(xt)],
+        [0, np.sin(xt), np.cos(xt)]
+        ])
 
-        cords = np.dot(xRot, cords)
+    yRot = ([
+        [np.cos(yt), 0, np.sin(yt)],
+        [0, 1, 0],
+        [-np.sin(yt), 0, np.cos(yt)]
+        ])
 
-    elif axis == 'y':
-        yRot = ([
-            [np.cos(theta), 0, np.sin(theta)],
-            [0, 1, 0],
-            [-np.sin(theta), 0, np.cos(theta)]
-            ])
+    zRot = ([
+        [np.cos(zt), -np.sin(zt), 0],
+        [np.sin(zt), np.cos(zt), 0],
+        [0, 0, 1]
+        ])   
 
-        cords = np.dot(yRot, cords)
+    cords = np.dot(yRot, verts.T)
+    cords = np.dot(xRot, cords)
+    cords = np.dot(zRot, cords)
 
-    elif axis == 'z':
-        zRot = ([
-            [np.cos(theta), -np.sin(theta), 0],
-            [np.sin(theta), np.cos(theta), 0],
-            [0, 0, 1]
-            ])   
+    return cords.T
 
-        cords = np.dot(zRot, cords)
-
-    return cords
-
+draw = False
 def projection(obj):
+    global draw
     focal_length = 600
+
+    verts = np.array(obj.vertexes)
+
+    #Translate vertex
+    verts = verts + [obj.x - playerCor[0], obj.y - playerCor[1], obj.z - playerCor[2]]
+
+    #near plane clipping
+    if np.any(verts - playerCor[0] > render_distance) or np.any(verts - playerCor[1] > render_distance) or np.any(verts - playerCor[0] > render_distance) or np.any(playerCor[0] - verts > render_distance) or np.any(playerCor[1] - verts > render_distance) or np.any(playerCor[0] - verts > render_distance):
+        draw = False
+        return
+
+    #Rotate vertex #parse rotation (local then global) axis all and verts
+    verts = rotate(obj.xRot+playerRot[0], obj.yRot+playerRot[1], obj.zRot+playerRot[2], verts)
+
+    #Prevent divide by zero or flipping of rendering
+
+    #project
     
-    for i in range(len(obj.vertexes)): #DO NUMPY HANDLING FROM HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE LOOK AT THIS JAMIE
-        #Translate vertex
-        tempX = obj.vertexes[i][0] + obj.x - playerCor[0]
-        tempY = obj.vertexes[i][1] + obj.y - playerCor[1]
-        tempZ = obj.vertexes[i][2] + obj.z - playerCor[2]
-
-        #Rotate vertex
-        cords = rotate(obj.yRot+playerRot[1], "y", tempX, tempY, tempZ)
-        cords = rotate(obj.xRot+playerRot[0], "x", cords[0], cords[1], cords[2])
-        cords = rotate(obj.zRot+playerRot[2], "z", cords[0], cords[1], cords[2])
-
-        #Prevent divide by zero or flipping of rendering
-        if cords[2] <= 0.0000001:
-            cords[2] = 0.0000001
-
-        obj.projected_vertexes[i][0] = (cords[0] * focal_length) / cords[2] + width / 2
-        obj.projected_vertexes[i][1] = (cords[1] * focal_length) / cords[2] + height / 2
+    for i in range(len(verts)):
+        if verts[i][2] > 0.0000001:
+            obj.projected_vertexes[i][0] = (verts[i][0] * focal_length) / verts[i][2] + width / 2
+            obj.projected_vertexes[i][1] = (verts[i][1] * focal_length) / verts[i][2] + height / 2
+        else:
+            draw = False
+            return
+        
+    draw = True
 
         
 class triangle():
@@ -159,11 +167,11 @@ class triangle():
             [R[0], R[1], R[2]]  #right vertex
             ]
 
-        self.projected_vertexes = [
+        self.projected_vertexes = ([
             [0, 0],
             [0, 0], 
             [0, 0]
-            ]
+            ])
 
         self.constructor = [0, 1, 2, 0]
         #constructor tells program what verts are connected
@@ -173,7 +181,8 @@ class triangle():
         # go through each constructor and draw the lines together
         projection(self)
         for i in range(3):
-            pygame.draw.line(scr, (255, 255, 255), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 1)
+            if draw:
+                pygame.draw.line(scr, (255, 255, 255), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 1)
 
 scene = []
 def load_scene(sceneinput):
@@ -189,8 +198,8 @@ def load_scene(sceneinput):
             print("loaded cube")
             scene.append(load_obj("cube", 0, 0, 10))
         elif sceneinput == "Flatland":
-            for i in range(5):
-                for ii in range(5):
+            for i in range(50):
+                for ii in range(50):
                     scene.append(load_obj("cube", 20*i, 20, 20*ii, 1))
         elif sceneinput == "Bigcube":
             for i in range(5):
@@ -203,8 +212,9 @@ def load_scene(sceneinput):
 playerCor = [0, 0, 0]
 playerRot = [0, 0, 0]
 
-pygame.mouse.set_visible(False)
-pygame.event.set_grab(True)
+grab = False
+pygame.mouse.set_visible(True)
+pygame.event.set_grab(grab)
 pygame.mouse.get_rel()
 pygame.init()
 run = True
@@ -221,18 +231,22 @@ while run:
     #movement
     if movement == "Free":
         keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            pygame.event.set_grab(False)
+            pygame.mouse.set_visible(True)
+            grab = False
         if keys[pygame.K_w]:
-            playerCor[2] += 0.4
+            playerCor[2] += 50 * dt
         if keys[pygame.K_a]:
-            playerCor[0] -= 0.4
+            playerCor[0] -= 50 * dt
         if keys[pygame.K_s]:
-            playerCor[2] -= 0.4
+            playerCor[2] -= 50 * dt
         if keys[pygame.K_d]:
-            playerCor[0] += 0.4
+            playerCor[0] += 50 * dt
         if keys[pygame.K_LSHIFT]:
-            playerCor[1] += 0.4  
+            playerCor[1] += 50 * dt 
         if keys[pygame.K_SPACE]:
-            playerCor[1] -= 0.4
+            playerCor[1] -= 50 * dt
     else:
         keys = pygame.key.get_pressed()
         if not int(floor) <= playerCor[1]:
@@ -259,6 +273,10 @@ while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            pygame.mouse.set_visible(False)
+            pygame.event.set_grab(True)
+            grab = True
 
     #drawing section, clear screen
     scr.fill((0, 0, 0))
@@ -267,7 +285,7 @@ while run:
 
     # drawing the loaded scene
     for i in range(len(scene)):
-        #each object
+        #each object=
         for ii in range(len(scene[i])):
             #each triangle
             scene[i][ii].draw()
@@ -279,10 +297,11 @@ while run:
     pygame.display.flip()
 
     dx, dy = pygame.mouse.get_rel()
-    playerRot[1] -= dx * 0.2 
-    playerRot[0] += dy * 0.2
+    if grab == True:
+        playerRot[1] -= dx * 0.2 
+        playerRot[0] += dy * 0.2
 
-    clock.tick(120)
+    dt = clock.tick(120) / 1000
     fps = clock.get_fps()
 
 pygame.quit()
