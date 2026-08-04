@@ -1,0 +1,11 @@
+read_obj now parses into an obj where [[triangle], [triangle]] where triangle is [globx, globy, globz, v1, v2, v3, xrot, yrot, zrot, size, constructor]
+as opposed to creating triangle object this means that scene is now [[[triangle], [triangle]], [[triangle, triangle]]]
+
+just parse more verts into rotation from projection (stay same)
+
+completely removed triangle class 
+and moved draw function to global draw function
+
+removed gravity test controlls
+
+fixed bugs & completed full refactor switching scalar maths to vector array maths

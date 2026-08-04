@@ -3,91 +3,104 @@ import numpy as np
 import math
 from pynput import mouse
 
-width = 900
-height = 800
+#-- INIT VARIABLES --#
+width, height = 900, 800
+fps = 0
+render_distance = 1000
+mousePos = [0, 0]
+details = False
+sceneName = ""
+scene = np.array([])
+playerCor = [0, 0, 0]
+playerRot = [0, 0, 0]
+draw = False
+grab = False #window mouse lock
+vertsX = []
+vertsY = []
+
+#directory variables
+root = __file__[:-7]
+Resources = f"{root}Resources/"
+
+#-- INIT PYGAME --#
 scr = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 pygame.font.init()
-mousePos = [0, 0]#
-fps = 5
-render_distance = 200
-
-Yvol = 0
-
-root = __file__[:-7]
-Resources = f"{root}Resources/"
-movement = "Walk"
-floor = 0
-details = False
-
 font = pygame.font.SysFont(None, 36)
+pygame.mouse.set_visible(True)
+pygame.event.set_grab(grab)
+pygame.mouse.get_rel()
+pygame.init()
 
-opened_scene = ""
-def read_scene():
-    global opened_scene
-    global floor
-    global movement
+#-- Read config file --#
+def read_config():
+    global sceneName
     global details
 
     with open(f"{root}Config.txt", 'r') as file:
         for line in file:
-            if line.startswith('Scene; '):
-                parts = line.strip().split()
-
-                if opened_scene == parts[1]:
+            parts = line.strip().split()
+            
+            #scene loading
+            if line.startswith("Scene; "):
+    
+                if sceneName == parts[1]:
                     return "same"
                 else:
-                    opened_scene = parts[1]
-                    return parts[1]
-
-            elif line.startswith('Camera;' ):
-                parts = line.strip().split()
-
-                if parts[1] == "Walk":
-                    movement = "Walk"
-                    floor = parts[2]
-                else:
-                    movement = "Free"
-
+                    sceneName = parts[1]
+                
+            #details loading
             elif line.startswith('Details; '):
-                parts = line.strip().split()
                 if parts[1] == "False":
                     details = False
                 else:
                     details = True
 
-        if opened_scene == parts[1]:
-            return "same"
-        else:
-            opened_scene = parts[1]
-            return parts[1]
-        
         
 
-import numpy as np
-
-# obj parse
-def load_obj(filename, xx=0, yy=0, zz=10, size = 1):
-    vertices = []
-    triangles = []
+#-- reads obj file and parse --#
+def read_obj(filename, xx=0, yy=0, zz=0, size=1):
+    verts = []
+    obj = []
     filename = f"{Resources}{filename}.obj"
 
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         for line in file:
-            if line.startswith('v '):
-                parts = line.strip().split()
-                x, y, z = float(parts[1])/size, 0 - float(parts[2])/size, float(parts[3])/size
-                vertices.append((x, y, z))
-            elif line.startswith('f '):
-                parts = line.strip().split()
-                face_indices = [int(p.split('/')[0]) - 1 for p in parts[1:4]]
-                v1, v2, v3 = vertices[face_indices[0]], vertices[face_indices[1]], vertices[face_indices[2]]
-                tri = triangle(x=xx, y=yy, z=zz, L=v1, T=v2, R=v3)
-                triangles.append(tri)
+            parts = line.strip().split()
 
-    return triangles
+            #verts
+            if line.startswith("v "):
+                x = float(parts[1])*size
+                y = 0 - float(parts[2])*size
+                z = float(parts[3])*size
+                verts.append((x, y, z))
 
-def rotate(xt, yt, zt, verts):
+            #faces
+            elif line.startswith("f "):
+
+                #access data
+                face = [int(p.split('/')[0]) - 1 for p in parts[1:4]]
+                v1, v2, v3 = verts[face[0]], verts[face[1]], verts[face[2]]
+
+                #triangle object
+                tri = [xx, yy, zz,
+                       v1[0], v1[1], v1[2],
+                       v2[0], v2[1], v2[2],
+                       v3[0], v3[1], v3[2],
+                       0,0,0,10]  # face can be dropped or flattened too
+                
+                obj.append(tri)
+
+    obj = np.array(obj)
+
+    return obj
+
+#-- ROTATE A GIVEN OBJ --#
+def rotate(xt, yt, zt, x, y, z):
+
+    verts = np.column_stack((x, y, z))
+    
+    #theta rotations of each axis
     xt, yt, zt = np.radians(xt), np.radians(yt), np.radians(zt)
 
     xRot = ([
@@ -108,200 +121,189 @@ def rotate(xt, yt, zt, verts):
         [0, 0, 1]
         ])   
 
-    cords = np.dot(yRot, verts.T)
-    cords = np.dot(xRot, cords)
-    cords = np.dot(zRot, cords)
+    #apply rotations
+    verts = np.dot(yRot, verts.T)
+    verts = np.dot(xRot, verts)
+    verts = np.dot(zRot, verts)
 
-    return cords.T
+    verts = verts.T
 
-draw = False
-def projection(obj):
+    x = verts[:, 0]
+    y = verts[:, 1]
+    z = verts[:, 2]
+
+    return x, y, z
+
+#-- projection math --#
+def projection():
     global draw
+    global projVerts
     focal_length = 600
+    projectedVerts = []
+    global vertsX
+    global vertsY
+    global scene
 
-    verts = np.array(obj.vertexes)
+    #print("Projection start:")
+    #print(scene[:16])
 
-    #Translate vertex
-    verts = verts + [obj.x - playerCor[0], obj.y - playerCor[1], obj.z - playerCor[2]]
+    xyzall = scene
 
-    #near plane clipping
-    if np.any(verts - playerCor[0] > render_distance) or np.any(verts - playerCor[1] > render_distance) or np.any(verts - playerCor[0] > render_distance) or np.any(playerCor[0] - verts > render_distance) or np.any(playerCor[1] - verts > render_distance) or np.any(playerCor[0] - verts > render_distance):
+    #xyzall as verts verts are values [3 4 5] global location is [0 1 2] rot is [6 7 8] and size is [9] BUT MAKE WORK WITH NTH TERM so INDEX NUMBER + LENGTH OF DATA INSIDE TRI
+    
+    #translation
+    #print("After translation:")
+    #print(scene[:16])
+    xyzall[3::16] = xyzall[3::16] + xyzall[0::16] - playerCor[0]#x
+    xyzall[4::16] = xyzall[4::16] + xyzall[1::16] - playerCor[1]#y
+    xyzall[5::16] = xyzall[5::16] + xyzall[2::16] - playerCor[2]#z
+
+    xyzall[6::16] = xyzall[6::16] + xyzall[0::16] - playerCor[0]
+    xyzall[7::16] = xyzall[7::16] + xyzall[1::16] - playerCor[1]
+    xyzall[8::16] = xyzall[8::16] + xyzall[2::16] - playerCor[2]
+
+    # v3
+    xyzall[9::16]  = xyzall[9::16]  + xyzall[0::16] - playerCor[0]
+    xyzall[10::16] = xyzall[10::16] + xyzall[1::16] - playerCor[1]
+    xyzall[11::16] = xyzall[11::16] + xyzall[2::16] - playerCor[2]
+
+    #render distance
+    if np.any(xyzall - playerCor[0] > render_distance) or np.any(xyzall - playerCor[1] > render_distance) or np.any(xyzall - playerCor[0] > render_distance) or np.any(playerCor[0] - xyzall > render_distance) or np.any(playerCor[1] - xyzall > render_distance) or np.any(playerCor[0] - xyzall > render_distance):
         draw = False
         return
 
-    #Rotate vertex #parse rotation (local then global) axis all and verts
-    verts = rotate(obj.xRot+playerRot[0], obj.yRot+playerRot[1], obj.zRot+playerRot[2], verts)
+    xyzall[3::16], xyzall[4::16], xyzall[5::16] = rotate(playerRot[0], playerRot[1], playerRot[2], xyzall[3::16], xyzall[4::16], xyzall[5::16]) #v1
+    xyzall[6::16], xyzall[7::16], xyzall[8::16] = rotate(playerRot[0], playerRot[1], playerRot[2], xyzall[6::16], xyzall[7::16], xyzall[8::16]) #v2
+    xyzall[9::16], xyzall[10::16], xyzall[11::16] = rotate(playerRot[0], playerRot[1], playerRot[2], xyzall[9::16], xyzall[10::16], xyzall[11::16]) #v3
 
-    #Prevent divide by zero or flipping of rendering
+    #project v
 
-    #project
-    
-    for i in range(len(verts)):
-        if verts[i][2] > 0.0000001:
-            obj.projected_vertexes[i][0] = (verts[i][0] * focal_length) / verts[i][2] + width / 2
-            obj.projected_vertexes[i][1] = (verts[i][1] * focal_length) / verts[i][2] + height / 2
-        else:
-            draw = False
-            return
-        
-    draw = True
+    v1x = xyzall[3::16] * focal_length / xyzall[5::16] + width / 2
+    v1y = xyzall[4::16] * focal_length / xyzall[5::16] + height / 2
+ 
+    v2x = xyzall[6::16] * focal_length / xyzall[8::16] + width / 2
+    v2y = xyzall[7::16] * focal_length / xyzall[8::16] + height / 2
 
-        
-class triangle():
+    v3x = xyzall[9::16] * focal_length / xyzall[11::16] + width / 2
+    v3y = xyzall[10::16] * focal_length / xyzall[11::16] + height / 2
 
-    def __init__(self, x=0, y=0, z=0, L = (-1, 0, 0), T = (-1, -2, 0), R = (1, 0, 0)):
-
-        self.x = x
-        self.y = y
-        self.z = z
-
-        self.xRot = 0
-        self.yRot = 0
-        self.zRot = 0
-        
-        size = 10
-
-        self.vertexes = [
-            [L[0], L[1], L[2]], #left vertex
-            [T[0], T[1], T[2]], #middle vertex
-            [R[0], R[1], R[2]]  #right vertex
-            ]
-
-        self.projected_vertexes = ([
-            [0, 0],
-            [0, 0], 
-            [0, 0]
-            ])
-
-        self.constructor = [0, 1, 2, 0]
-        #constructor tells program what verts are connected
-
-    def draw(self):
-
-        # go through each constructor and draw the lines together
-        projection(self)
-        for i in range(3):
-            if draw:
-                pygame.draw.line(scr, (255, 255, 255), (self.projected_vertexes[self.constructor[i]][0], self.projected_vertexes[self.constructor[i]][1]), (self.projected_vertexes[self.constructor[i+1]][0], self.projected_vertexes[self.constructor[i+1]][1]), 1)
-
-scene = []
-def load_scene(sceneinput):
+    # Then draw lines between them
+    for i in range(len(v1x)):
+        if xyzall[i*16+5] > 0 and xyzall[i*16+8] > 0 and xyzall[i*16+11] > 0: 
+            pygame.draw.line(scr, (255,255,255), (v1x[i], v1y[i]), (v2x[i], v2y[i]), 2)
+            pygame.draw.line(scr, (255,255,255), (v2x[i], v2y[i]), (v3x[i], v3y[i]), 2)
+            pygame.draw.line(scr, (255,255,255), (v3x[i], v3y[i]), (v1x[i], v1y[i]), 2)
+                             
+#-- populte scene --#
+def load_scene(sceneName):
     global scene
 
-    if sceneinput != "same":
+    #check if the scene is the same
+    if sceneName != "same":
         scene = []
-        if sceneinput == "Untitled":
-            print("loaded untitled")
-            scene.append(load_obj("tree", 0, 0, 0, 0.5))
-            scene.append(load_obj("crate", 0, 5, 0, 0.5))
-        elif sceneinput == "Cube":
-            print("loaded cube")
-            scene.append(load_obj("cube", 0, 0, 10))
-        elif sceneinput == "Flatland":
-            for i in range(50):
-                for ii in range(50):
-                    scene.append(load_obj("cube", 20*i, 20, 20*ii, 1))
-        elif sceneinput == "Bigcube":
+
+        #loads untitled 
+        if sceneName == "Untitled":
+            scene = np.append(scene, read_obj("tree", 0, 0, 0, 1))
+            scene = np.append(scene, read_obj("crate", 0, 5, 0, 0.5))
+
+        #loads cube
+        elif sceneName == "Cube":
+            scene = np.append(scene, read_obj("cube", 0, 0, 10))
+
+        elif sceneName == "Car":
+            scene = np.append(scene, read_obj("car", 0, 0, 10))
+
+        elif sceneName == "Bigcube":
             for i in range(5):
                 for ii in range(5):
                     for iii in range(5):
-                        scene.append(load_obj("cube", 20*i, 20*iii, 20*ii, 1))
-    
-    
+                        scene = np.append(scene, read_obj("cube", 20*i, 20*iii, 20*ii))
 
-playerCor = [0, 0, 0]
-playerRot = [0, 0, 0]
+    else:
+        return
+            
+        print(f"Loaded {sceneName}")
+        print(scene[:16])
 
-grab = False
-pygame.mouse.set_visible(True)
-pygame.event.set_grab(grab)
-pygame.mouse.get_rel()
-pygame.init()
 run = True
 while run:
+    
+    #update text variables
     fpstext = font.render(str(math.ceil(fps)), True, (255, 255, 255))
     xyztext = font.render(
-        f"x;{math.ceil(playerCor[0])} y;{math.ceil(playerCor[1])} z;{math.ceil(playerCor[2])}",
+        f"x;{math.ceil(playerCor[0])} y;{math.ceil(playerCor[1])} z;{math.ceil(playerCor[2])} xr;{math.ceil(playerRot[0])} yr;{math.ceil(playerRot[1])}",
         True,
         (255, 255, 255)
     )
 
-    load_scene(read_scene())
+    #load scene and config data
+    read_config()
+    load_scene(sceneName)
 
-    #movement
-    if movement == "Free":
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_ESCAPE]:
-            pygame.event.set_grab(False)
-            pygame.mouse.set_visible(True)
-            grab = False
-        if keys[pygame.K_w]:
-            playerCor[2] += 50 * dt
-        if keys[pygame.K_a]:
-            playerCor[0] -= 50 * dt
-        if keys[pygame.K_s]:
-            playerCor[2] -= 50 * dt
-        if keys[pygame.K_d]:
-            playerCor[0] += 50 * dt
-        if keys[pygame.K_LSHIFT]:
-            playerCor[1] += 50 * dt 
-        if keys[pygame.K_SPACE]:
-            playerCor[1] -= 50 * dt
-    else:
-        keys = pygame.key.get_pressed()
-        if not int(floor) <= playerCor[1]:
-            Yvol += 0.05
-            playerCor[1] += Yvol
-        else:
-            Yvol = 0 
-            if keys[pygame.K_SPACE]:
-                Yvol = -1.25
-                playerCor[1] += Yvol
-        
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            playerCor[2] += 0.4
-        if keys[pygame.K_s]:
-            playerCor[2] -= 0.4
-        if keys[pygame.K_a]:
-            playerCor[0] -= 0.4
-        if keys[pygame.K_d]:
-            playerCor[0] += 0.4
-        
+    #read key inputs
+    keys = pygame.key.get_pressed()
 
+    #misc controls
+    if keys[pygame.K_ESCAPE]:
+        pygame.event.set_grab(False)
+        pygame.mouse.set_visible(True)
+        grab = False
+
+    #movement keys
+    if keys[pygame.K_w]:
+        playerCor[2] += 50 * dt
+    if keys[pygame.K_a]:
+        playerCor[0] -= 50 * dt
+    if keys[pygame.K_s]:
+        playerCor[2] -= 50 * dt
+    if keys[pygame.K_d]:
+        playerCor[0] += 50 * dt
+    if keys[pygame.K_LSHIFT]:
+        playerCor[1] += 50 * dt 
+    if keys[pygame.K_SPACE]:
+        playerCor[1] -= 50 * dt
+    
     #event handler
     for event in pygame.event.get():
+
+        #close out of window
         if event.type == pygame.QUIT:
             run = False
+
+        #focus the window
         if event.type == pygame.MOUSEBUTTONDOWN:
             pygame.mouse.set_visible(False)
             pygame.event.set_grab(True)
             grab = True
 
-    #drawing section, clear screen
+    #draw section
     scr.fill((0, 0, 0))
 
-    keys = pygame.key.get_pressed()
-
-    # drawing the loaded scene
-    for i in range(len(scene)):
-        #each object=
-        for ii in range(len(scene[i])):
-            #each triangle
-            scene[i][ii].draw()
+    #print("Before projection:")
+    #print(scene[:16])
+    
+    projection()
 
     if details == True:
         scr.blit(fpstext, (0, 0))
         scr.blit(xyztext, (0, 20))
-        
+
     pygame.display.flip()
 
+    # turn mouse pos into player rot theta
     dx, dy = pygame.mouse.get_rel()
     if grab == True:
-        playerRot[1] -= dx * 0.2 
+        playerRot[1] -= dx * 0.2
         playerRot[0] += dy * 0.2
-
+        if playerRot[0] >= 90 or playerRot[0] <= -90:
+            playerRot[0] -= dy * 0.2
+            
+    #get delta time and fps
     dt = clock.tick(120) / 1000
     fps = clock.get_fps()
+
+    #print(scene[3:6], scene[6:9], scene[9:12])
+    #print(len(scene) % 16 == 0, scene.dtype)
 
 pygame.quit()

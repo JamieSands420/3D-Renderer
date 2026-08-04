@@ -3,11 +3,8 @@
 #fps & player xyz
 Details; True
 
-# movement method Free/Walk
-Camera; Free 0
-
 # loaded scene:
-Scene; Untitled
+Scene; Cube
 
 # Built in scenes:
 # Untitled
