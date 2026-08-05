@@ -9,3 +9,5 @@ and moved draw function to global draw function
 removed gravity test controlls
 
 fixed bugs & completed full refactor switching scalar maths to vector array maths
+
+Added full perspective correct texture mapping

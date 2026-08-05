@@ -13,14 +13,18 @@ sceneName = ""
 scene = np.array([])
 playerCor = [0, 0, 0]
 playerRot = [0, 0, 0]
+wireframe = False
 draw = False
 grab = False #window mouse lock
 vertsX = []
 vertsY = []
 
+zbuffer = np.full((width, height), -np.inf) #zbuffer array
+
 #directory variables
 root = __file__[:-7]
-Resources = f"{root}Resources/"
+Textures = f"{root}Resources//Textures/"
+Models = f"{root}Resources//Models/"
 
 #-- INIT PYGAME --#
 scr = pygame.display.set_mode((width, height))
@@ -31,6 +35,10 @@ pygame.mouse.set_visible(True)
 pygame.event.set_grab(grab)
 pygame.mouse.get_rel()
 pygame.init()
+
+texture = pygame.image.load(f"{Textures}//grass.png").convert()
+texture_width, texture_height = texture.get_size()
+texture = pygame.surfarray.array3d(texture)
 
 #-- Read config file --#
 def read_config():
@@ -62,7 +70,7 @@ def read_config():
 def read_obj(filename, xx=0, yy=0, zz=0, size=1):
     verts = []
     obj = []
-    filename = f"{Resources}{filename}.obj"
+    filename = f"{Models}{filename}.obj"
 
     with open(filename, "r") as file:
         for line in file:
@@ -134,6 +142,76 @@ def rotate(xt, yt, zt, x, y, z):
 
     return x, y, z
 
+uv_ = [
+    [0.0, 0.0],  
+    [1.0, 0.0], 
+    [0.5, 1.0]  
+]
+
+def barycentric(triangle, z):
+    global zbuffer
+
+    # bounding box
+    min_x = int(min(triangle[0][0], triangle[1][0], triangle[2][0])) 
+    max_x = int(max(triangle[0][0], triangle[1][0], triangle[2][0])) 
+    min_y = int(min(triangle[0][1], triangle[1][1], triangle[2][1])) 
+    max_y = int(max(triangle[0][1], triangle[1][1], triangle[2][1]))
+
+    min_x = np.clip(min_x, 0, width)
+    max_x = np.clip(max_x, 0, width) 
+    min_y = np.clip(min_y, 0, height)
+    max_y = np.clip(max_y, 0, height)
+
+    xbound = np.arange(min_x, max_x)
+    ybound = np.arange(min_y, max_y)
+
+    x_pos = min_x
+    y_pos = min_y
+
+    # take vertexes
+    ax= triangle[0][0] 
+    ay= triangle[0][1] 
+    bx= triangle[1][0] 
+    by= triangle[1][1]
+    cx= triangle[2][0] 
+    cy= triangle[2][1]
+
+    #   math
+    d = (by - cy)*(ax - cx) + (cx - bx)*(ay - cy)
+    a= ((by - cy)*(xbound[:, None] - cx) + (cx - bx)*(ybound - cy)) / d
+    b= ((cy - ay)*(xbound[:, None] - cx) + (ax - cx)*(ybound - cy)) / d
+    c= 1-a-b
+
+    mask = (a >= 0) & (b >= 0) & (c >= 0)
+    x_in, y_in = np.where(mask)
+
+
+    if len(x_in) == 0:
+        return
+
+    iz = a[mask] * (1/z[0]) + b[mask] * (1/z[1]) + c[mask] * (1/z[2])
+
+    u = (a[mask] * (uv_[0][0]/z[0]) + b[mask] * (uv_[1][0]/z[1]) + c[mask] * (uv_[2][0]/z[2])) / iz
+    v = (a[mask] * (uv_[0][1]/z[0]) + b[mask] * (uv_[1][1]/z[1]) + c[mask] * (uv_[2][1]/z[2])) / iz
+    z = (a[mask] * (1/z[0]) + b[mask] * (1/z[1]) + c[mask] * (1/z[2])) 
+
+    # apply to the zbuffer
+    px = x_in + x_pos
+    py = y_in + y_pos
+
+    old_z = zbuffer[px, py]
+
+    closermask = z > old_z # masks the values that are closer to the camera in the zbuffer
+
+    zbuffer[px[closermask], py[closermask]] = z[closermask] # apply the masked values that are smaller
+
+    tex_x = (u * (texture_width - 1)).astype(int)
+    tex_y = (v * (texture_height - 1)).astype(int)
+    color = texture[tex_x, tex_y]
+
+    pixels = pygame.surfarray.pixels3d(scr)
+    pixels[px[closermask], py[closermask]] = color[closermask]
+
 #-- projection math --#
 def projection():
     global draw
@@ -152,11 +230,9 @@ def projection():
     #xyzall as verts verts are values [3 4 5] global location is [0 1 2] rot is [6 7 8] and size is [9] BUT MAKE WORK WITH NTH TERM so INDEX NUMBER + LENGTH OF DATA INSIDE TRI
     
     #translation
-    #print("After translation:")
-    #print(scene[:16])
-    xyzall[3::16] = xyzall[3::16] + xyzall[0::16] - playerCor[0]#x
-    xyzall[4::16] = xyzall[4::16] + xyzall[1::16] - playerCor[1]#y
-    xyzall[5::16] = xyzall[5::16] + xyzall[2::16] - playerCor[2]#z
+    xyzall[3::16] = xyzall[3::16] + xyzall[0::16] - playerCor[0]
+    xyzall[4::16] = xyzall[4::16] + xyzall[1::16] - playerCor[1]
+    xyzall[5::16] = xyzall[5::16] + xyzall[2::16] - playerCor[2]
 
     xyzall[6::16] = xyzall[6::16] + xyzall[0::16] - playerCor[0]
     xyzall[7::16] = xyzall[7::16] + xyzall[1::16] - playerCor[1]
@@ -188,11 +264,31 @@ def projection():
     v3y = xyzall[10::16] * focal_length / xyzall[11::16] + height / 2
 
     # Then draw lines between them
-    for i in range(len(v1x)):
-        if xyzall[i*16+5] > 0 and xyzall[i*16+8] > 0 and xyzall[i*16+11] > 0: 
-            pygame.draw.line(scr, (255,255,255), (v1x[i], v1y[i]), (v2x[i], v2y[i]), 2)
-            pygame.draw.line(scr, (255,255,255), (v2x[i], v2y[i]), (v3x[i], v3y[i]), 2)
-            pygame.draw.line(scr, (255,255,255), (v3x[i], v3y[i]), (v1x[i], v1y[i]), 2)
+    if wireframe:
+        for i in range(len(v1x)):
+            if xyzall[i*16+5] > 0 and xyzall[i*16+8] > 0 and xyzall[i*16+11] > 0: 
+                pygame.draw.line(scr, (255,255,255), (v1x[i], v1y[i]), (v2x[i], v2y[i]), 2)
+                pygame.draw.line(scr, (255,255,255), (v2x[i], v2y[i]), (v3x[i], v3y[i]), 2)
+                pygame.draw.line(scr, (255,255,255), (v3x[i], v3y[i]), (v1x[i], v1y[i]), 2)
+    else:
+        zbuffer.fill(-np.inf) # reset the zbuffer 
+
+        for i in range(len(v1x)): #checks per triangle
+            if xyzall[i*16+5] > 0 and xyzall[i*16+8] > 0 and xyzall[i*16+11] > 0: 
+                
+                singletriangle = [
+                    [v1x[i], v1y[i]],
+                    [v2x[i], v2y[i]],
+                    [v3x[i], v3y[i]],
+                ]
+
+                zvalues = [
+                    xyzall[i*16+5],
+                    xyzall[i*16+8],
+                    xyzall[i*16+11]
+                ]
+
+                barycentric(singletriangle, zvalues) # runs the barycentric formula for one triangle
                              
 #-- populte scene --#
 def load_scene(sceneName):
@@ -214,17 +310,16 @@ def load_scene(sceneName):
         elif sceneName == "Car":
             scene = np.append(scene, read_obj("car", 0, 0, 10))
 
-        elif sceneName == "Bigcube":
-            for i in range(5):
-                for ii in range(5):
-                    for iii in range(5):
-                        scene = np.append(scene, read_obj("cube", 20*i, 20*iii, 20*ii))
+        elif sceneName == "Flatland":
+            for i in range(20):
+                for ii in range(20):
+                    scene = np.append(scene, read_obj("cube", 20*i, 0, 20*ii))
 
     else:
         return
             
         print(f"Loaded {sceneName}")
-        print(scene[:16])
+        
 
 run = True
 while run:
@@ -300,7 +395,7 @@ while run:
             playerRot[0] -= dy * 0.2
             
     #get delta time and fps
-    dt = clock.tick(120) / 1000
+    dt = clock.tick() / 1000
     fps = clock.get_fps()
 
     #print(scene[3:6], scene[6:9], scene[9:12])
